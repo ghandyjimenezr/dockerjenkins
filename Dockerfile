@@ -1,23 +1,29 @@
-FROM jenkins/jenkins
+FROM jenkins/jenkins:lts
 USER root
 
+# Instalar dependencias necesarias
 RUN apt-get update && \
-apt-get -y install apt-transport-https \
-     ca-certificates \
-     curl \
-     gnupg2 \
-     software-properties-common && \
-curl -fsSL https://download.docker.com/linux/$(. /etc/os-release; echo "$ID")/gpg > /tmp/dkey; apt-key add /tmp/dkey && \
-add-apt-repository \
-   "deb [arch=amd64] https://download.docker.com/linux/$(. /etc/os-release; echo "$ID") \
-   $(lsb_release -cs) \
-   stable" && \
-apt-get update && \
-apt-get -y install docker-ce
+    apt-get -y install apt-transport-https \
+                       ca-certificates \
+                       curl \
+                       gnupg2 \
+                       software-properties-common
 
+# Agregar la clave GPG oficial de Docker
+RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
-RUN curl -L "https://github.com/docker/compose/releases/download/1.27.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose
+# Agregar el repositorio de Docker
+RUN echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
 
+# Actualizar los paquetes e instalar Docker
+RUN apt-get update && \
+    apt-get -y install docker-ce docker-ce-cli containerd.io
+
+# Instalar Docker Compose
+RUN curl -L "https://github.com/docker/compose/releases/download/2.32.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && \
+    chmod +x /usr/local/bin/docker-compose
+
+# Agregar el usuario jenkins al grupo docker
 RUN usermod -aG docker jenkins
 
 USER jenkins
